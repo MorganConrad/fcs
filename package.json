@@ -1,0 +1,23 @@
+{
+  "name": "fcs",
+  "version": "0.0.1",
+  "description": "Flow Cytometry Standard (FCS) file reader",
+  "main": "fcs.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/MorganConrad/fcs.git"
+  },
+  "keywords": [
+    "FCS",
+    "Flow",
+    "Cytometry"
+  ],
+  "author": "Morgan Conrad",
+  "license": "MIT",
+  "bugs": {
+    "url": "http://github.com/MorganConrad/fcs/issues"
+  }
+}
