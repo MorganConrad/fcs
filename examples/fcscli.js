@@ -19,15 +19,7 @@ for (var a=2; a<process.argv.length; a++) {
       filenames.push(process.argv[a]);
 }
 
-if (options.stdin) {
-    filenames = [];
-    var fcs = new FCS(options);
-    process.stdin.resume();
-    fcs.readStream(process.stdin, function (fcs) {
-        console.log(fcs.toJSON());
-    });
-}
-else if (filenames.length == 0) {
+if (filenames.length == 0) {
     console.error('usage: node fcscli filename [filenames] [--arg=value]');
     process.exit(1);
 }

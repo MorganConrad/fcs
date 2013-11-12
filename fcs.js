@@ -1,16 +1,17 @@
 /**
- * Created by Morgan Conrad on 11/7/13.
+ * @author Morgan Conrad
+ * Copyright(c) 2013
+ * This software is released under the MIT license  (http://opensource.org/licenses/MIT)
  */
 
-var hup = require('./library/hup');
 
 /**
  * Constructor
  * @param options   options,  {}, optional argument
- * @param streamOrBuffer   if present, read it.  (Otherwise, call readFCS() later)
+ * @param buffer   if present, read it.  (Otherwise, call readFCS() later)
  * @constructor
  */
-function FCS( /* optional */ options, streamOrBuffer) {
+function FCS( /* optional */ options, buffer) {
    "use strict";
 
     // allow "static" usage, save user from misuse...
@@ -29,26 +30,26 @@ function FCS( /* optional */ options, streamOrBuffer) {
 
    this.options(options);
 
-   if (streamOrBuffer) {
-       if (Buffer.isBuffer(streamOrBuffer))
-           this.readBuffer(streamOrBuffer);
+   if (buffer) {
+       if (Buffer.isBuffer(buffer))
+           this.readBuffer(buffer);
        else
-           this.readStream(streamOrBuffer);
+           throw "only Buffers supported for now";
    }
 
 
     // override the toJSON() method
     this.toJSON = function() {
-        var json = '{\r "meta": ';
+        var json = '{\n "meta": ';
         json += JSON.stringify(this.meta, null, 2);
-        json += ',\r "header": ';
+        json += ',\n "header": ';
         json += JSON.stringify(this.header, null, 2);
-        json += ',\r "text": ';
+        json += ',\n "text": ';
         json += JSON.stringify(this.text, null, 2);
-        json += ',\r "data": \r';
+        json += ',\n "data": \n';
         if (this.dataAsStrings) {
             // for clarity, an extra CRLF after groupByParam data
-            var delim = (FCS.OPTION_VALUES.byParam === this.meta.groupBy) ? ',\r\r' : ',\r';
+            var delim = (FCS.OPTION_VALUES.byParam === this.meta.groupBy) ? ',\n\n' : ',\n';
             json += '[';
             for (var i=0; i<this.dataAsStrings.length; i++) {
                 if (i > 0)
@@ -60,7 +61,7 @@ function FCS( /* optional */ options, streamOrBuffer) {
         else if (this.dataAsNumbers)
            json += JSON.stringify(this.dataAsNumbers, null, 2);
 
-        json += '\r}';  // close
+        json += '\n}';  // close
         return json;
     };
 
@@ -194,51 +195,34 @@ FCS.prototype.readBuffer = function (databuf, /* optional */ moreOptions) {
 };
 
 
+// here follow the public "getters/accessor" methods
+
+
 /**
-* Reads from a Stream.  Collects it all into a Buffer first.
-*/
-FCS.prototype.readStream = function(readableStream, callback) {
+ * Returns a single value from the ANALYSIS section
+ *    e.g.   analysis('GATE1 count') ->  '1234'
+ * @param key     varargs
+ * @returns String, null if none were found.
+ */
+FCS.prototype.analysis = function(key /*...*/ ) {
+    "use strict";
+    if (!this.analysis)
+       return null;
 
-    var self = this;
+    var result = this.analysis[key];
+    var idx = 0;
+    while (!result && (++idx < arguments.length))
+        result = this.analysis(arguments[idx]);
 
-    // temp
-    var logit = function(x) {
-        console.log(x);
-    }
-
-    var callbacks = {
-       readable: logit,
-       close: logit
-    };
-
-    var reader = new hup.ReadStreamToBuffer();
-    reader.read(readableStream, function(buffer) {
-        self.readBuffer(buffer, moreOptions);
-        if (callback)
-            callback(self);
-    });
+    return result;
 };
 
-FCS.prototype.readStreamSync = function(readableStream) {
-    var chunks = [];
-    var chunk;
-
-    while (null !== (chunk = readableStream.read())) {
-        chunks.push(chunk);
-    }
-
-    var buffer = Buffer.concat(chunks);
-    this.readBuffer(buffer);
-}
-
-
-// here follow the public "getters/accessor" methods
 
 /**
  * Returns a single value from the TEXT section
  *    e.g.   text('$CYT') ->  'FACSort'
  * @param key     varargs
- * @returns {*}
+ * @returns String, null if none were found.
  */
 FCS.prototype.text = function(key /*...*/ ) {
     "use strict";
@@ -500,7 +484,7 @@ FCS.prototype._readDataGroupByParam = function (databuf) {
                 if (e>0) {
                     dataStrings[p] += ',';
                     if ((e % maxPerLine) === 0)
-                        dataStrings[p] += '\r';
+                        dataStrings[p] += '\n';
                 }
 
                 if (decimalsToPrint >= 0)
