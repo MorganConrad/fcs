@@ -6,7 +6,6 @@ lib-cov
 *.out
 *.pid
 *.gz
-*.fcs
 
 pids
 logs
@@ -14,3 +13,9 @@ results
 
 npm-debug.log
 node_modules
+
+#my ignores
+test/
+examples/fcsfiles/
+*.fcs
+.idea/
