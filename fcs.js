@@ -218,12 +218,12 @@ FCS.prototype.get = function(segment, key /*...*/) {
     "use strict";
     var theSegment = this[segment];
     if (!key)
-       return theSection;
+       return theSegment;
   
-    var result = theSection[key];
+    var result = theSegment[key];
     var idx = 2;
     while (!result && (idx < arguments.length))
-        result = theSection[arguments[idx++]];
+        result = theSegment[arguments[idx++]];
 
     return result;    
 }
