@@ -5,11 +5,17 @@
 </head>
 <body>
   <h2> Fancy smancy form upload is not yet implemented</h2>
-Please use <a href="http://curl.haxx.se/">cURL, a command line tool for transferring data with URL syntax</a>
+<h4> Please use <a href="http://curl.haxx.se/">cURL, a command line tool for transferring data with URL syntax</a> </h4>
 <p>
-   <h3> Suggested usage (use PUT syntax!  Important: end the url path with a "/")</h3>
+   <h3> Suggested usage:</h3>
 
-    <h4> &nbsp;&nbsp;cURL -T  &nbsp; myfile.fcs &nbsp;  http://www.somefcshttpsite.com/?options1=value1&option2=value2</h4>
+  <h4>&nbsp;&nbsp;cURL -T  &nbsp; myfile.fcs &nbsp;  "http://www.somefcshttpsite.com/?options1=value1&option2=value2" </h4>
+  <ul>
+      <li>Use PUT syntax.  Simplest is the cURL -T option, but YMMV.</li>
+      <li>Only upload one file at a time (for now).  Quote the filename if it includes spaces etc.</li>
+      <li>End the url path with a slash: e.g. http://www.somefcshttpsite.com<strong>/</strong>, before giving any ?options</li>
+      <li>If you use options, you probably need to quote the url to avoid the OS interpreting any special symbols</li>
+   </ul>
 </p>
 </body>
 </html>

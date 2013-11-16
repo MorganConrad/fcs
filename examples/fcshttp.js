@@ -7,10 +7,14 @@
  * Any FCS file received with a PUT
  *    will be read by FCS,
  *    and echoed back in JSON
+ *
+ *  most query params are sent as options to fcs
+ *  the exception is that o=blah are used to select a small subset of the result
  */
 
 var fs = require('fs');
 var http=require('http');
+var url=require('url');
 
 // depending on your setup, edit the following two lines
 var FCS=require('../fcs');
@@ -33,9 +37,14 @@ http.createServer(function (req, res) {
 function handlePut(req, res) {
     var options = {};
 
-    for (var p in req.query ) {
-        var value = req.param(p);
-           options[p] = value;
+    var url_parts = url.parse(req.url, true);
+
+    var onlys = url_parts.query.o;
+
+    for (var p in url_parts.query ) {
+        if ('o' !== p) {
+            options[p] = url_parts.query[p];
+        }
     }
 
     var chunks = [];
@@ -48,7 +57,11 @@ function handlePut(req, res) {
         var fcs = new FCS(options, buffer);
         res.setHeader('content-type', 'application/json');
         res.statusCode = 200;
-        res.end(fcs.toJSON());
+
+        if (onlys)
+           res.end(JSON.stringify(fcs.getOnly(onlys), null, 2));
+        else
+            res.end(fcs.toJSON());
     });
 
 

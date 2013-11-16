@@ -1,6 +1,8 @@
+[![Build Status](https://secure.travis-ci.org/morganconrad/fcs.png)](http://travis-ci.org/morganconrad/fcs)
+
 #fcs
 
-Javascript / node.js code to read FCS flow cytometry data.  Will read all of the HEADER, TEXT, and ANALYSIS sections into key/value pairs.  Reads raw (likely uncompensated) data as well, either into numeric arrays for further analysis, or as Strings for quickly scanning the data. 
+Javascript / node.js code to read FCS flow cytometry data.  Will read all of the HEADER, TEXT, and ANALYSIS segments into key/value pairs.  Reads raw (likely uncompensated) data as well, either into numeric arrays for further analysis, or as Strings for quickly scanning the data. 
 
 ##basic usage
 
@@ -10,8 +12,8 @@ Javascript / node.js code to read FCS flow cytometry data.  Will read all of the
 e.g. to read from a file asynchronously
 
 ```javascript
- var FCS = require('fcs');
- FS.readFile(filename, function(err, databuf) {
+    var FCS = require('fcs');
+    FS.readFile(filename, function(err, databuf) {
         if (err) {
             console.error(err);
             }
@@ -33,7 +35,7 @@ e.g. to read from a file asynchronously
 * maxPerLine:      **10**
 * eventSkip:   **0**  if eventsToRead is less than the events in the file, this allows you to more randomly sample.  A value of 'true' has them equally distributed.  0 means read the first events from the file.
 
-Any additional options are ignored, but will be printed under a "meta" section in the JSON.  For example, you might want to include a date, your laboratory, etc...
+Any additional options are ignored, but will be printed under a "meta" segment in the JSON.  For example, you might want to include a date, your laboratory, etc...
 
 #api
 
@@ -47,40 +49,48 @@ If buffer is present it will be read, otherwise you need to call readBuffer() la
 Set or add options.
 
 ###myFCS.readBuffer(buffer, moreOptions)
-Read data from buffer.  moreOptions are optional.
+Read data from buffer.  moreOptions are optional.  Hopefully by now you've set them all! :-)
 
 
 ##retrieving the data
 
-###text(keyword, additionalKeywords...)
-Returns the value from the TEXT section.  
-  *e.g.* `text('$P3N') might return 'FL1-H'
-If additionalKeywords are provided, it stops at the first "hit", but this is useful if different vendors use different keywords.
+###get(segment, keywords...)
+segment should be one of  ('text', 'analysis', or, more rarely, 'header', 'meta').  
+If no keywords are provided, returns that entire segment  
+otherwise, returns a single value, stopping at the first match to the keyword.  
+Returns null if none were found.
 
-###$PnX(x)
-Return an array of all N keywords.  The 0th value will be empty.
-  *e.g.* `$PnX('N') might return ['', 'FSC, 'SSC', 'FL1-H', ...]
+###getText(keywords...)
+Equivalent to get('text', keywords)  
+  *e.g.* `text('$P3N') might return 'FL1-H'  
 
-###analysis(keyword, additionalKeywords...)
-Returns the value from the ANALYSIS section.
+###get$PnX(x)
+Return an array of all N keywords for that P.X combination.  The 0th value will be empty.  
+  *e.g.* `get$PnX('N') might return ['', 'FSC, 'SSC', 'FL1-H', ...]
 
-###numericData(oneBasedIndex)
-Returns an array of Numbers for the respective event or parameter.
+###getAnalysis(keyword, additionalKeywords...)
+Equivalent to get('analysis', keywords)
 
-###stringData(oneBasedIndex)
-Returns an array of Strings for the respective event or parameter.
+###getNumericData(oneBasedIndex)
+Returns an array of Numbers for the respective event or parameter, iff you requested numeric data.
 
+###getStringData(oneBasedIndex)
+Returns an array of Strings for the respective event or parameter, iff you requested string data.
+
+###getOnly(onlys)
+Returns a subset of the JSON, based upon onlys, an array of dot delimited Strings  
+  *e.g.* getOnlys(['meta','text.$P1N') would return all of meta, plus parameter 1 name
 
 ##fields
 
-### .text 
-  Holds all the TEXT
+### .header
+  Holds the HEADER segment (first 256 bytes).  The version is header.FCSVersion
 
-### .headers 
-  Holds the version and offsets
+### .text
+  Holds all the TEXT segment
 
-### .analysis 
-  Holds all the analysis, if there was any
+### .analysis
+  Holds all the ANALYSIS segment.  If none, is an empty object {}
 
 ### .meta
-  Holds all he options, plus a bit more
+  Holds all the options, plus a bit more

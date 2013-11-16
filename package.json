@@ -1,10 +1,17 @@
 {
   "name": "fcs",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Flow Cytometry Standard (FCS) file reader",
   "main": "fcs.js",
+
+  "devDependencies": {
+     "mocha": "1.14.x"
+  },
+
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+      "test": "mocha",
+      "testOnUnixUseThis"    : "./node_modules/.bin/mocha (I think)",
+      "testOnWindowsUseThis" : "node node_modules/mocha/bin/mocha"
   },
   "repository": {
     "type": "git",
@@ -15,7 +22,8 @@
     "Flow",
     "Cytometry"
   ],
-  "author": "Morgan Conrad",
+  "author": "Morgan Conrad  <flyingspaniel@gmail.com>",
+  "homepage": "http://flyingspaniel.com/fcs/",
   "license": "MIT",
   "bugs": {
     "url": "http://github.com/MorganConrad/fcs/issues"

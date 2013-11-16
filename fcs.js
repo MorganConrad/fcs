@@ -26,6 +26,8 @@ function FCS( /* optional */ options, buffer) {
 
    this.header = {};
    this.text = {};
+   this.analysis = {};
+
    this.dataAsStrings = this.dataAsNumbers = null;
 
    this.options(options);
@@ -46,6 +48,8 @@ function FCS( /* optional */ options, buffer) {
         json += JSON.stringify(this.header, null, 2);
         json += ',\n "text": ';
         json += JSON.stringify(this.text, null, 2);
+        json += ',\n "analysis": ';
+        json += JSON.stringify(this.analysis, null, 2);
         json += ',\n "data": \n';
         if (this.dataAsStrings) {
             // for clarity, an extra CRLF after groupByParam data
@@ -64,8 +68,6 @@ function FCS( /* optional */ options, buffer) {
         json += '\n}';  // close
         return json;
     };
-
-
 }
 
 /*
@@ -117,6 +119,13 @@ FCS.DEFAULT_VALUES = {
         groupBy:         'byEvent'     // alternative is 'byParam'
 };
 
+FCS.SEGMENT = {
+    META:     'meta',
+    HEADER:   'header',
+    TEXT:     'text',
+    ANALYSIS: 'analysis',
+};
+
 
 /**
  * Adds properties from options to our meta data, overwriting if necessary
@@ -160,8 +169,8 @@ FCS.prototype.readBuffer = function (databuf, /* optional */ moreOptions) {
     var encoding = this.meta.encoding || FCS.DEFAULT_VALUES.encoding;
     this.header = this._readHeader(databuf, encoding);
 
-    var textSection = databuf.toString(encoding, this.header.beginText, this.header.endText);
-    this.text = this._readTextOrAnalysis(textSection);
+    var textSegment = databuf.toString(encoding, this.header.beginText, this.header.endText);
+    this.text = this._readTextOrAnalysis(textSegment);
 
     // update a few important meta.
     this.meta.eventCount = Number(this.text['$TOT']);
@@ -178,8 +187,8 @@ FCS.prototype.readBuffer = function (databuf, /* optional */ moreOptions) {
     }
 
     if (this.header.beginAnalysis) {
-        var analysisSection = databuf.toString(encoding, this.header.beginAnalysis, this.header.endAnalysis);
-        this.analysis = this._readTextOrAnalysis(analysisSection);
+        var analysisSegment = databuf.toString(encoding, this.header.beginAnalysis, this.header.endAnalysis);
+        this.analysis = this._readTextOrAnalysis(analysisSegment);
     }
 
     // TODO  supplemental text, e.g. $BEGINSTEXT, $ENDSTEXT
@@ -199,55 +208,84 @@ FCS.prototype.readBuffer = function (databuf, /* optional */ moreOptions) {
 
 
 /**
- * Returns a single value from the ANALYSIS section
+ * All purpose get, called by the other methods
+ * @param segment   one of FCS.SEGMENT  (typically 'text',analysis', more rarely 'meta','header')
+ * @param key       if none, returns the entire segment
+ *                  otherwise, return first property match
+ * @returns         {} if no-arg, else String, null if none were found.
+ */
+FCS.prototype.get = function(segment, key /*...*/) {
+    "use strict";
+    var theSegment = this[segment];
+    if (!key)
+       return theSection;
+  
+    var result = theSection[key];
+    var idx = 2;
+    while (!result && (idx < arguments.length))
+        result = theSection[arguments[idx++]];
+
+    return result;    
+}
+
+/**
+ * intermediate code to handle adding the segment to the array-like arguments
+ * @param segment
+ * @param argsAL  array-like, typically arguments  null returns entire segment
+ * @returns {*}
+ */
+
+FCS.prototype.getAL = function(segment, argsAL) {
+    "use strict";
+    if (argsAL && argsAL.length) {
+        // magic code to add segment at the start of the arguments
+        [].unshift.call(arguments, segment);
+        return this.get.apply(this, arguments);
+    }
+    
+    else
+        return this[segment];
+}
+
+/**
+ * If no arguments are provided, returns *all* the ANALYSIS segment (may be {})
+ * Otherwise, returns a single value from the ANALYSIS segment.
  *    e.g.   analysis('GATE1 count') ->  '1234'
- * @param key     varargs
- * @returns String, null if none were found.
+ * @param keys     varargs, returns first "hit"
+ * @returns       {} if no-arg, else String, null if none were found.
  */
-FCS.prototype.analysis = function(key /*...*/ ) {
+FCS.prototype.getAnalysis = function(keys /*...*/ ) {
     "use strict";
-    if (!this.analysis)
-       return null;
-
-    var result = this.analysis[key];
-    var idx = 0;
-    while (!result && (++idx < arguments.length))
-        result = this.analysis(arguments[idx]);
-
-    return result;
+    return this.getAL(FCS.SEGMENT.HEADER, keys);
 };
 
 
 /**
- * Returns a single value from the TEXT section
- *    e.g.   text('$CYT') ->  'FACSort'
- * @param key     varargs
- * @returns String, null if none were found.
+ * If no arguments are provided, returns *all* the TEXT segment.
+  *Otherwise, returns a single value from the TEXT segment.
+ *    e.g.   getText('$CYT') ->  'FACSort'
+ * @param keys     varargs,  returns first "hit"
+ * @returns       {} if no-arg, else String, null if none were found.
  */
-FCS.prototype.text = function(key /*...*/ ) {
+FCS.prototype.getText = function(keys /*...*/ ) {
     "use strict";
-    var result = this.text[key];
-    var idx = 0;
-    while (!result && (++idx < arguments.length))
-       result = this.text(arguments[idx]);
-
-    return result;
+    return this.getAL(FCS.SEGMENT.TEXT, keys);
 };
 
 
 /**
- * Returns an entire array of values from the text section,
+ * Returns an entire array of values from the text segment,
  * The returned array has 1 based indexing
- *    e.g.   text('N') => [,'FSC-H','SSC-H','FL1-H', etc...]
+ *    e.g.   get$PnX('N') => [,'FSC-H','SSC-H','FL1-H', etc...]
  * @param x
  * @returns {Array}
  */
-FCS.prototype.$PnX = function(x) {
+FCS.prototype.get$PnX = function(x) {
     "use strict";
     var result = [];
     result[0] = null;
     for (var p=1; p<= this.meta.$PAR; p++)
-       result[p] = this.text('$P' + p + x);
+       result[p] = this.text['$P' + p + x];
 
     return result;
 };
@@ -259,7 +297,7 @@ FCS.prototype.$PnX = function(x) {
  * @param idx   1-based.
  * @returns {[]} of Numbers
  */
-FCS.prototype.numericData = function(idx) {
+FCS.prototype.getNumericData = function(idx) {
     "use strict";
     if (this.dataAsNumbers)
        return this.dataAsNumbers[idx-1];
@@ -274,13 +312,42 @@ FCS.prototype.numericData = function(idx) {
  * @param idx   1-based.
  * @returns {[]}  of Strings
  */
-FCS.prototype.stringData = function(idx) {
+FCS.prototype.getStringData = function(idx) {
     "use strict";
     if (this.dataAsStrings)
         return this.dataAsStrings[idx-1];
     else
         return null;
 };
+
+
+/**
+ * Return an shallow copy object of a smallish subset of us
+ * @param onlys[]   dot delimited Strings, e.g. 'meta' to get all of meta, 'text.$P1N' to get parameter 1 name
+ * @returns {{}}    will be empty if onlys is empty
+ */
+FCS.prototype.getOnly = function(onlys) {
+    "use strict";
+    // if only one, force to an array...
+    if (!Array.isArray(onlys))
+        onlys = [onlys];
+    var result = {};
+    for (var i=0; i<onlys.length; i++) {
+        var s = onlys[i].split('.',2);  // we only go 1 or 2 deep
+        var s0 = s[0];
+        if (s.length == 1) {  // copy everything
+           result[s0] = this[s0];
+        }
+        else {
+            if (!result[s0])
+               result[s0] = {};
+            result[s0][s[1]] = this[s0][s[1]];
+        }
+    }
+
+    return result;
+};
+
 
 
 // here follow private methods
@@ -294,7 +361,14 @@ FCS.prototype.stringData = function(idx) {
  */
 FCS.prototype._prepareReadParameters = function (databuf) {
     "use strict";
-    var isBE = '4,3,2,1' === this.text.$BYTEORD;
+    var isBE;
+    if ('4,3,2,1' === this.text.$BYTEORD)
+       isBE = true;
+    else if ('1,2,3,4' === this.text.$BYTEORD)
+        isBE = false;
+    else
+       throw 'cannot handle $BYTEORD= ' + this.text.$BYTEORD;
+
     var options = this.meta;
 
     var readParameters = {
@@ -511,7 +585,7 @@ FCS.prototype._readDataGroupByParam = function (databuf) {
 };
 
 /**
- * Read the header section (the first 256 bytes)
+ * Read the header segment (the first 256 bytes)
  *
  * @param databuf   required
  * @param encoding  usually absent, defaults to utf8
@@ -542,7 +616,7 @@ FCS.prototype._readHeader = function(databuf, encoding) {
 
 
 /**
- * Reads the delimited key/value pairs of a TEXT or ANALYSIS section
+ * Reads the delimited key/value pairs of a TEXT or ANALYSIS segment
  * @param string   if falsy returns empty object
  * @returns {{}}
  */
