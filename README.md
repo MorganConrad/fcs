@@ -1,4 +1,4 @@
-[![Build Status](https://secure.travis-ci.org/morganconrad/fcs.png)](http://travis-ci.org/morganconrad/fcs)
+[![Build Status](https://secure.travis-ci.org/MorganConrad/fcs.png)](http://travis-ci.org/MorganConrad/fcs)
 
 #fcs
 
