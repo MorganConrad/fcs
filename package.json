@@ -1,6 +1,6 @@
 {
   "name": "fcs",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Flow Cytometry Standard (FCS) file reader",
   "main": "fcs.js",
 
