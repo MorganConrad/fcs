@@ -172,20 +172,8 @@ FCS.prototype.readBuffer = function (databuf, /* optional */ moreOptions) {
     var textSegment = databuf.toString(encoding, this.header.beginText, this.header.endText);
     this.text = this._readTextOrAnalysis(textSegment);
 
-    // update a few important meta.
-    this.meta.eventCount = Number(this.text['$TOT']);
-    this.meta.$PAR =  Number(this.text['$PAR']);
-
-    // possibly adjust data and analysis headers for huge files
-    if (this.header.beginData === 0) {
-        this.header.beginData = Number(this.text['$BEGINDATA']);
-        this.header.endData = Number(this.text['$ENDDATA']);
-    }
-    if (this.header.beginAnalysis === 0) {
-        this.header.beginAnalysis = Number(this.text['$BEGINANALYSIS'] || 0);
-        this.header.endAnalysis = Number(this.text['$ENDANALYSIS'] || 0);
-    }
-
+    this._adjustHeaderBasedUponText(this.text);
+    
     if (this.header.beginAnalysis) {
         var analysisSegment = databuf.toString(encoding, this.header.beginAnalysis, this.header.endAnalysis);
         this.analysis = this._readTextOrAnalysis(analysisSegment);
@@ -193,13 +181,10 @@ FCS.prototype.readBuffer = function (databuf, /* optional */ moreOptions) {
 
     // TODO  supplemental text, e.g. $BEGINSTEXT, $ENDSTEXT
 
-    if ('H' !== this.text.$MODE) {
-        if (FCS.OPTION_VALUES.byParam === this.meta.groupBy)
-            this._readDataGroupByParam(databuf);
-        else
-            this._readDataGroupByEvent(databuf);
-    }
+    this.dataAsNumbers = this.dataAsStrings = null;
 
+    this._readData(databuf);
+    
     return this;
 };
 
@@ -404,6 +389,8 @@ FCS.prototype._prepareReadParameters = function (databuf) {
         default:  throw "oops";
     }
 
+    readParameters.bytesPerEvent = readParameters.bytes * this.meta.$PAR;
+
     if (options.skip && (readParameters.eventsToRead < this.meta.eventCount)) {
         var events2Skip;
         if (isFinite(options.skip))
@@ -412,7 +399,7 @@ FCS.prototype._prepareReadParameters = function (databuf) {
             events2Skip = Math.floor(this.meta.eventCount / readParameters.eventsToRead) -1;
             this.meta.eventSkip = options.skip + " -> " + events2Skip;
         }
-        readParameters.bigSkip = events2Skip * readParameters.bytes * this.meta.$PAR;
+        readParameters.bigSkip = events2Skip * readParameters.bytesPerEvent;
     }
 
     return readParameters;
@@ -423,20 +410,14 @@ FCS.prototype._prepareReadParameters = function (databuf) {
  * Read data and group 1st by event (the natural order in the file)
  *
  * @param databuf  required
- * @param options  optional
+ * @param readParameters  optional
  * @returns {FCS}  for convenience
  */
-FCS.prototype._readDataGroupByEvent = function (databuf) {
+FCS.prototype._readDataGroupByEvent = function (databuf, readParameters) {
     "use strict";
 
-    this.dataAsNumbers = this.dataAsStrings = null;
-   // var options = this.meta;
-    if (FCS.OPTION_VALUES.asNone === this.meta.dataFormat) {
-        return this;
-    }
-
     // determine if these are ints, floats, etc...
-    var readParameters = this._prepareReadParameters(databuf);
+    readParameters = readParameters || this._prepareReadParameters(databuf);
 
     var offset = Number(this.header.beginData);
 
@@ -505,19 +486,13 @@ FCS.prototype._readDataGroupByEvent = function (databuf) {
  * Read data and group 1st by parameter
  *
  * @param databuf   required
- * @param options   optional
+ * @param readParameters   optional
  * @returns {FCS}   for convenience
  */
-FCS.prototype._readDataGroupByParam = function (databuf) {
+FCS.prototype._readDataGroupByParam = function (databuf, readParameters) {
     "use strict";
 
-    // clear old values
-    this.dataAsNumbers = this.dataAsStrings = null;
-
-    if (FCS.OPTION_VALUES.asNone === this.meta.dataFormat)
-       return this;
-
-    var readParameters = this._prepareReadParameters(databuf);
+    readParameters = readParameters || this._prepareReadParameters(databuf);
 
     var offset = Number(this.header.beginData);
 
@@ -628,6 +603,11 @@ FCS.prototype._readTextOrAnalysis = function(string) {
        return result;
 
     var delim = string.charAt(0);
+    
+    if ('<' === delim) {  // Millipore puts in ANALYSIS as XML, don't try to split it up  (TODO use xml2js)
+        result.asXML = string;
+        return result;
+    }
 
     // test for escaped delimiters
     var delim2 = delim + delim;
@@ -673,7 +653,7 @@ FCS.prototype._readTextOrAnalysis = function(string) {
 
     // Grab all the key/value pairs.  Start at 1 cause split also added a blank field at the beginning
     for (var i = 1; i < splits.length; i += 2) {
-        var key = splits[i];
+        var key = splits[i].trim();  // Partec puts \n before analysis keywords
         var value = splits[i+1];
         result[key] = value;
     }
@@ -682,21 +662,187 @@ FCS.prototype._readTextOrAnalysis = function(string) {
 };
 
 
+FCS.prototype._readData = function(databuf, readParameters) {
+    if (('H' === this.text.$MODE) || (FCS.OPTION_VALUES.asNone === this.meta.dataFormat))
+        return this;
+
+    readParameters = readParameters || this._prepareReadParameters(databuf);
+
+    if (FCS.OPTION_VALUES.byParam === this.meta.groupBy)
+        this._readDataGroupByParam(databuf, readParameters);
+    else
+        this._readDataGroupByEvent(databuf, readParameters);
+    
+    return this;
+};
+
+
 /**
- * This static utility function probably belongs somewhere else
- * @see http://stackoverflow.com/questions/14269233/node-js-how-to-read-a-stream-into-a-buffer
+ * FCS 3.0 added support for huge files, where the actual DATA segment may be described in the TEXT segment
+ * Also sets meta.eventCount and meta.$PAR since they are used so often
+ * 
+ * @param inText
+ * @private
  */
+FCS.prototype._adjustHeaderBasedUponText = function(inText) {
 
+    inText = inText || this.text;
+    
+    // update a few important meta.
+    this.meta.eventCount = Number(inText['$TOT']);
+    this.meta.$PAR =  Number(inText['$PAR']);
 
-function readStreamFully(readableStream, callback, options) {
-    "use strict";
+    // possibly adjust data and analysis headers for huge files
+    if (this.header.beginData === 0) {
+        this.header.beginData = Number(inText['$BEGINDATA']);
+        this.header.endData = Number(inText['$ENDDATA']);
+    }
+    if (this.header.beginAnalysis === 0) {
+        this.header.beginAnalysis = Number(inText['$BEGINANALYSIS'] || 0);
+        this.header.endAnalysis = Number(inText['$ENDANALYSIS'] || 0);
+    }
 
-    options = options || {};
-
-    var bufs =[];
-
-    readableStream.on()
 }
 
 
+
 module.exports = FCS;
+
+
+// under development below...
+
+
+/**
+ * First pass at code to read an FCS file asynchronously, shutting it down when we are done...
+ * @param stream
+ * @param moreOptions  may be null, must be present for spacing!
+ * @param callback(err, this)
+ */
+FCS.prototype.readStreamAsync = function(stream, moreOptions, callback) {
+    "use strict";
+    
+    // static usage is impossible currently, but in case we change the "classiness" in the future...
+    if (!(this instanceof FCS)) {
+        var fcs = new FCS();
+        fcs.readStreamAsync(stream, moreOptions, callback);
+    }
+
+    // add any moreOptions,  meta is now "complete"
+    this.options(moreOptions);
+    
+    var state = 'header';
+    var encoding = this.meta.encoding || FCS.DEFAULT_VALUES.encoding;   
+    var eventsNeeded = ('asNone' === this.meta.dataFormat) ? 0 :
+                       this.meta.eventsToRead || FCS.DEFAULT_VALUES.eventsToRead;
+    var isAnalysisThere = false;
+    var isAnalysisSegmentBeforeData = false;
+    
+    var self = this;
+
+    var bytesNeeded = 256;  // for the header
+    var bytesRead = 0;
+    var chunks = [];
+    var readParameters;
+    
+    stream.on('data', function(chunk) {
+        if ('done' === state)  // all done, just ignore...
+            return;
+        
+        chunks.push(chunk);
+        bytesRead += chunk.length;
+        
+        // console.log(bytesRead + " bytesRead\n");
+        
+        // may do multiple steps at once, hence while
+        while (('done' !== state) && (bytesRead >= bytesNeeded)) {
+            var buffer = Buffer.concat(chunks);
+            chunks = [buffer];
+            
+            switch(state) {
+                
+                case 'header': self.header = self._readHeader(buffer);
+                               bytesNeeded = self.header.endText;
+                               state = 'text';
+                               break;
+                
+                case 'text'  : var string = buffer.toString(encoding, self.header.beginText, self.header.endText);
+                               self.text = self._readTextOrAnalysis(string);
+                               self._adjustHeaderBasedUponText(self.text);
+                               
+                               // look at TEXT to figure out what next
+                               isAnalysisThere = self.header.beginAnalysis > 0;
+                               isAnalysisSegmentBeforeData = isAnalysisThere && 
+                                                      (self.header.beginAnalysis < self.header.beginData)
+                    
+                               if (isAnalysisSegmentBeforeData) {
+                                   state = 'analysis';
+                                   bytesNeeded = self.header.endAnalysis;
+                               }
+                               else if (eventsNeeded > 0) {
+                                   bytesNeeded = prepareForData(buffer);
+                               }
+                               else {
+                                  allDone(true); 
+                               }
+                               break;
+                
+                case 'analysis': var string = buffer.toString(encoding, self.header.beginAnalysis, self.header.endAnalysis);
+                                 self.analysis = self._readTextOrAnalysis(string);
+                    
+                                 if (isAnalysisSegmentBeforeData && (eventsNeeded > 0)) {
+                                     bytesNeeded = prepareForData(buffer);
+                                 }
+                                 else {
+                                     allDone(isAnalysisSegmentBeforeData);
+                                 }
+                               break;
+                
+                case 'data'   : self._readData(buffer, readParameters);
+                    
+                                if (isAnalysisThere && !isAnalysisSegmentBeforeData) { 
+                                    state = 'analysis';
+                                    bytesNeeded = self.header.endAnalysis;
+                                }
+                                else {
+                                    allDone(true);
+                                }
+                               break;
+            }
+            
+        }
+    });
+
+    stream.on('close', function(err) {
+        if ('done' !== state)
+           callback('closed', self);
+    });
+    
+    stream.on('end', function(err) {
+        if ('done' !== state)
+           callback('end', self)
+    });
+    
+    stream.on('error', function(err) {
+        callback(err, self)
+    });
+
+    function prepareForData(buffer) {
+        state = 'data';
+        readParameters = self._prepareReadParameters(buffer);
+        return eventsNeeded * (readParameters.bigSkip + readParameters.bytesPerEvent) +
+            self.header.beginData;
+    };
+    
+    
+    function allDone(callDestroy, err) {
+        state = 'done';
+        
+        // I'm not sure if all streams have a destroy() method
+        if (callDestroy && ('function' === typeof(stream.destroy)))
+           stream.destroy();
+        
+        callback(err, self);
+    }
+    
+ 
+}

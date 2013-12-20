@@ -11,7 +11,7 @@ var mocha = require('mocha');
 
 var EMPTY = JSON.stringify({});
 
-describe('test FCS', function() {  // can only have one base level describe???
+describe('test FCS', function() {
 
     describe('after new FCS()', function() {
         var fcs = new FCS();
@@ -53,23 +53,41 @@ describe('test FCS', function() {  // can only have one base level describe???
         });
     });
 
-    describe('after reading an FCS file', function() {
+    describe('after reading an FCS file synchronously ', function() {
         it('should have text and data', function(done) {
             fs.readFile('./test/testdata/AriaFile1.fcs', function(err, databuf) {
                 assert(!err);
                 var fcs = new FCS(null, databuf);
-                assert.equal('FCS3.0', fcs.header.FCSVersion);
-                assert.equal('4,3,2,1', fcs.getText('$BYTEORD'));
-                assert(fcs.getAnalysis());
-                assert(!fcs.getAnalysis('foo'));
-                assert.equal('[33471.21,33250.00', fcs.getStringData(1).substring(0, 18));
+                assertAriaTextAndData(fcs);
                 done();
             });
         });
     });
 
 
+    describe('after read async', function() {
+        var stream;
+        it('should have text and data', function(done) {
+            stream = fs.createReadStream('./test/testdata/AriaFile1.fcs');
+            var fcs = new FCS( { eventsToRead : 4000 });  // 4000 forces multiple reads 
+            fcs.readStreamAsync(stream, null, function(err, fcs) {
+                assert(!err);
+                assertAriaTextAndData(fcs);
+                done();
+            });
+        });
+        
+    });
 });
+
+
+function assertAriaTextAndData(fcs) {
+    assert.equal('FCS3.0', fcs.header.FCSVersion);
+    assert.equal('4,3,2,1', fcs.getText('$BYTEORD'));
+    assert(fcs.getAnalysis());
+    assert(!fcs.getAnalysis('foo'));
+    assert.equal('[33471.21,33250.00', fcs.getStringData(1).substring(0, 18)); 
+}
 
 
 
