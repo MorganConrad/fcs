@@ -47,7 +47,8 @@ for (var a=2; a<process.argv.length; a++) {
 
 if (filenames.length == 0) {
     console.error('usage: node fcscli filename [filenames] [--arg=value]');
-    process.exit(1);
+   filenames = ['C:\Work\FCSFiles\FCSRepository\BD - FACS Aria II - Compensation Controls_G710 Stained Control.fcs'];
+    // process.exit(1);
 }
 
 

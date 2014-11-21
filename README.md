@@ -1,4 +1,6 @@
 [![Build Status](https://secure.travis-ci.org/MorganConrad/fcs.png)](http://travis-ci.org/MorganConrad/fcs)
+[![License](http://img.shields.io/badge/license-MIT-A31F34.svg)](https://github.com/MorganConrad/fcs)
+[![NPM Downloads](http://img.shields.io/npm/dm/fcs.svg)](https://www.npmjs.org/package/fcs)
 
 #fcs
 

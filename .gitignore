@@ -11,8 +11,10 @@ pids
 logs
 results
 
+coverage
 npm-debug.log
 node_modules
+projectFilesBackup
 
 #my ignores
 examples/fcsfiles/

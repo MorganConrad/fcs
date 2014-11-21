@@ -1,21 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Form upload unavailable</title>
+   <title>Upload a file</title>
+   <script>
+      function upload(event) {
+         var reader = new FileReader();
+
+         reader.onload = function(e) {
+
+            var data = new ArrayBuffer(reader.result.length);
+            var ui8a = new Uint8Array(data, 0);
+            for (var i = 0; i < reader.result.length; i++)
+               ui8a[i] = (reader.result.charCodeAt(i) & 0xff);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", '/', false);  // synchronous, keep it simple
+            xhr.send(data);
+			
+			var ta1 = document.getElementById('text1');
+			ta1.value=xhr.responseText;
+         }
+
+         var files = event.target.files;
+         if (files.length)
+            reader.readAsBinaryString(files[0]);
+      }
+   </script>
 </head>
 <body>
-  <h2> Fancy smancy form upload is not yet implemented</h2>
-<h4> Please use <a href="http://curl.haxx.se/">cURL, a command line tool for transferring data with URL syntax</a> </h4>
-<p>
-   <h3> Suggested usage:</h3>
 
-  <h4>&nbsp;&nbsp;cURL -T  &nbsp; myfile.fcs &nbsp;  "http://www.somefcshttpsite.com/?options1=value1&option2=value2" </h4>
+<h3> We suggest you use <a href="http://curl.haxx.se/">cURL, a command line tool for transferring data with URL syntax</a> </h3>
+<p>
+
+  <h4>&nbsp;&nbsp;e.g. &gt;cURL -T  &nbsp; myfile.fcs &nbsp;  "http://www.somefcshttpsite.com/?options1=value1&option2=value2" </h4>
   <ul>
-      <li>Use PUT syntax.  Simplest is the cURL -T option, but YMMV.</li>
+      <li>Use PUT or POST syntax.  Simplest is the cURL -T option, but YMMV.</li>
       <li>Only upload one file at a time (for now).  Quote the filename if it includes spaces etc.</li>
       <li>End the url path with a slash: e.g. http://www.somefcshttpsite.com<strong>/</strong>, before giving any ?options</li>
       <li>If you use options, you probably need to quote the url to avoid the OS interpreting any special symbols</li>
    </ul>
 </p>
+<h3>Or Submit a file directly</h3>
+<input type="file" name="filename" onchange="upload(event);" style="width: 300px;"><br><br>
+<textarea readonly rows="25" cols="100" id="text1"></textarea>
+
 </body>
 </html>

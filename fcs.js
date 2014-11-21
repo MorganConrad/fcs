@@ -4,6 +4,8 @@
  * This software is released under the MIT license  (http://opensource.org/licenses/MIT)
  */
 
+var FCSWriteStream = require('./fcswritestream');
+
 
 /**
  * Constructor
@@ -18,6 +20,8 @@ function FCS( /* optional */ options, buffer) {
     if (!(this instanceof FCS))
        return new FCS(options, databuf);
 
+    
+    
     // important options to always have in meta so they get remembered
    this.meta =  {
        dataFormat: FCS.DEFAULT_VALUES.dataFormat,
@@ -27,6 +31,8 @@ function FCS( /* optional */ options, buffer) {
    this.header = {};
    this.text = {};
    this.analysis = {};
+   this.bytesRead = 0;
+    
 
    this.dataAsStrings = this.dataAsNumbers = null;
 
@@ -70,11 +76,14 @@ function FCS( /* optional */ options, buffer) {
     };
 }
 
+
+
+
 /*
  * Constants for possible incoming option/meta values
  * Also see the defaults below in FCS.DEFAULT_VALUES
  */
-FCS.OPTION_VALUES = {
+module.exports.OPTION_VALUES = FCS.OPTION_VALUES = {
 
     // .dataFormat should hold one of the following:
     asNumber: 'asNumber',   // collect data in large numeric arrays
@@ -110,7 +119,7 @@ FCS.OPTION_VALUES = {
  * Default values for the options we use.  In general, you should treat these as constants,
  * but if you really want to change the default behavior I can't stop you...
  */
-FCS.DEFAULT_VALUES = {
+module.exports.DEFAULT_VALUES = FCS.DEFAULT_VALUES = {
         decimalsToPrint: 2,            // 0 means "all events"
         encoding:        'utf8',
         eventsToRead:    1000,         // an integer, 0 means "all events"
@@ -119,7 +128,7 @@ FCS.DEFAULT_VALUES = {
         groupBy:         'byEvent'     // alternative is 'byParam'
 };
 
-FCS.SEGMENT = {
+module.exports.SEGMENT = FCS.SEGMENT = {
     META:     'meta',
     HEADER:   'header',
     TEXT:     'text',
@@ -333,6 +342,45 @@ FCS.prototype.getOnly = function(onlys) {
     return result;
 };
 
+
+
+/**
+ * Read asynchronously, using an FCSWriteableStream.
+ * @param readStream   required
+ * @param moreOptions  optional
+ * @param callback     if present, callback(err, fcs) gets called at the end.
+ */
+FCS.prototype.readStreamAsync = function(readStream, moreOptions, callback) {
+    var self = this;
+    var fws = this.prepareWriteableStream(callback, readStream);
+    this.options(moreOptions);
+
+    readStream.pipe(fws);
+}
+
+
+/**
+ * Prepares a writeableStream for use with this FCS
+ * if a callback is provided, all you need do is readableStream.pipe(fws);
+ * 
+ * @param callback         if present, it will get called back with (err, fcs)
+ * @param readableStream   if present, may get closed sooner...
+ * @returns {FCSWriteStream}
+ */
+FCS.prototype.prepareWriteableStream = function(callback, readableStream) {
+    "use strict";
+    var fws = new FCSWriteStream(this, readableStream);
+    if (callback) {
+        fws.on('finish', function (err) {
+            callback(err, fws.fcs);  // access the underlying fcs via  fws.getFCS()
+        });
+        fws.on('error', function (err) {
+            callback(err, fws.fcs);
+        });
+    }
+    
+    return fws;
+}
 
 
 // here follow private methods
@@ -707,142 +755,3 @@ FCS.prototype._adjustHeaderBasedUponText = function(inText) {
 
 
 module.exports = FCS;
-
-
-// under development below...
-
-
-/**
- * First pass at code to read an FCS file asynchronously, shutting it down when we are done...
- * @param stream
- * @param moreOptions  may be null, must be present for spacing!
- * @param callback(err, this)
- */
-FCS.prototype.readStreamAsync = function(stream, moreOptions, callback) {
-    "use strict";
-    
-    // static usage is impossible currently, but in case we change the "classiness" in the future...
-    if (!(this instanceof FCS)) {
-        var fcs = new FCS();
-        fcs.readStreamAsync(stream, moreOptions, callback);
-    }
-
-    // add any moreOptions,  meta is now "complete"
-    this.options(moreOptions);
-    
-    var state = 'header';
-    var encoding = this.meta.encoding || FCS.DEFAULT_VALUES.encoding;   
-    var eventsNeeded = ('asNone' === this.meta.dataFormat) ? 0 :
-                       this.meta.eventsToRead || FCS.DEFAULT_VALUES.eventsToRead;
-    var isAnalysisThere = false;
-    var isAnalysisSegmentBeforeData = false;
-    
-    var self = this;
-
-    var bytesNeeded = 256;  // for the header
-    var bytesRead = 0;
-    var chunks = [];
-    var readParameters;
-    
-    stream.on('data', function(chunk) {
-        if ('done' === state)  // all done, just ignore...
-            return;
-        
-        chunks.push(chunk);
-        bytesRead += chunk.length;
-        
-        // console.log(bytesRead + " bytesRead\n");
-        
-        // may do multiple steps at once, hence while
-        while (('done' !== state) && (bytesRead >= bytesNeeded)) {
-            var buffer = Buffer.concat(chunks);
-            chunks = [buffer];
-            
-            switch(state) {
-                
-                case 'header': self.header = self._readHeader(buffer);
-                               bytesNeeded = self.header.endText;
-                               state = 'text';
-                               break;
-                
-                case 'text'  : var string = buffer.toString(encoding, self.header.beginText, self.header.endText);
-                               self.text = self._readTextOrAnalysis(string);
-                               self._adjustHeaderBasedUponText(self.text);
-                               
-                               // look at TEXT to figure out what next
-                               isAnalysisThere = self.header.beginAnalysis > 0;
-                               isAnalysisSegmentBeforeData = isAnalysisThere && 
-                                                      (self.header.beginAnalysis < self.header.beginData)
-                    
-                               if (isAnalysisSegmentBeforeData) {
-                                   state = 'analysis';
-                                   bytesNeeded = self.header.endAnalysis;
-                               }
-                               else if (eventsNeeded > 0) {
-                                   bytesNeeded = prepareForData(buffer);
-                               }
-                               else {
-                                  allDone(true); 
-                               }
-                               break;
-                
-                case 'analysis': var string = buffer.toString(encoding, self.header.beginAnalysis, self.header.endAnalysis);
-                                 self.analysis = self._readTextOrAnalysis(string);
-                    
-                                 if (isAnalysisSegmentBeforeData && (eventsNeeded > 0)) {
-                                     bytesNeeded = prepareForData(buffer);
-                                 }
-                                 else {
-                                     allDone(isAnalysisSegmentBeforeData);
-                                 }
-                               break;
-                
-                case 'data'   : self._readData(buffer, readParameters);
-                    
-                                if (isAnalysisThere && !isAnalysisSegmentBeforeData) { 
-                                    state = 'analysis';
-                                    bytesNeeded = self.header.endAnalysis;
-                                }
-                                else {
-                                    allDone(true);
-                                }
-                               break;
-            }
-            
-        }
-    });
-
-    stream.on('close', function(err) {
-        if ('done' !== state)
-           callback('closed', self);
-    });
-    
-    stream.on('end', function(err) {
-        if ('done' !== state)
-           callback('end', self)
-    });
-    
-    stream.on('error', function(err) {
-        callback(err, self)
-    });
-
-    function prepareForData(buffer) {
-        state = 'data';
-        readParameters = self._prepareReadParameters(buffer);
-        return eventsNeeded * (readParameters.bigSkip + readParameters.bytesPerEvent) +
-            self.header.beginData;
-    };
-    
-    
-    function allDone(callDestroy, err) {
-        state = 'done';
-        
-        // I'm not sure if all streams have a destroy() method
-        if (callDestroy && ('function' === typeof(stream.destroy)))
-           stream.destroy();
-        
-        callback(err, self);
-    }
-    
- 
-}

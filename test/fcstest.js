@@ -58,7 +58,7 @@ describe('test FCS', function() {
             fs.readFile('./test/testdata/AriaFile1.fcs', function(err, databuf) {
                 assert(!err);
                 var fcs = new FCS(null, databuf);
-                assertAriaTextAndData(fcs);
+                assertAriaTextAndData(fcs, false);
                 done();
             });
         });
@@ -69,10 +69,10 @@ describe('test FCS', function() {
         var stream;
         it('should have text and data', function(done) {
             stream = fs.createReadStream('./test/testdata/AriaFile1.fcs');
-            var fcs = new FCS( { eventsToRead : 4000 });  // 4000 forces multiple reads 
+            var fcs = new FCS( { eventsToRead : 4000, groupBy: "byParam" });  // 4000 forces multiple reads 
             fcs.readStreamAsync(stream, null, function(err, fcs) {
                 assert(!err);
-                assertAriaTextAndData(fcs);
+                assertAriaTextAndData(fcs, true);
                 done();
             });
         });
@@ -81,12 +81,26 @@ describe('test FCS', function() {
 });
 
 
-function assertAriaTextAndData(fcs) {
+function assertAriaTextAndData(fcs, byParam) {
     assert.equal('FCS3.0', fcs.header.FCSVersion);
     assert.equal('4,3,2,1', fcs.getText('$BYTEORD'));
     assert(fcs.getAnalysis());
     assert(!fcs.getAnalysis('foo'));
-    assert.equal('[33471.21,33250.00', fcs.getStringData(1).substring(0, 18)); 
+    if (!byParam)
+        assert.equal('[33471.21,33250.00', fcs.getStringData(1).substring(0, 18)); 
+    
+    var p1nViaGetOnly = fcs.getOnly('text.$P1N');
+    var p1NViaPnX = fcs.get$PnX('N');
+    assert.equal(p1nViaGetOnly.text['$P1N'], p1NViaPnX[1]);
+    
+    // not a great test, but look for 1st line of data
+    var json = fcs.toJSON();
+    if (byParam) {
+        assert.equal(3984, json.indexOf('[[33471.21,33892.11,30264.09'));
+    }
+    else {
+       assert.equal(3960, json.indexOf('[[33471.21,33250.00,1708.00')); 
+    }
 }
 
 

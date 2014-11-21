@@ -4,7 +4,7 @@
  * This software is released under the MIT license  (http://opensource.org/licenses/MIT)
  *
  * This is an extremely basic http server.
- * Any FCS file received with a PUT
+ * Any FCS file received with a PUT or POST
  *    will be read by FCS,
  *    and echoed back in JSON
  *
@@ -23,7 +23,7 @@ var port = 3000;
 
 
 http.createServer(function (req, res) {
-   if ('PUT' === req.method)
+   if (('PUT' === req.method) || ('POST' === req.method))
       handlePut(req, res);
 
    // provide basic instructions in case they do a normal GET (or anything else)
@@ -35,7 +35,7 @@ http.createServer(function (req, res) {
 
 
 function handlePut(req, res) {
-    var options = {};
+    var options = { encoding: "binary" };
 
     var url_parts = url.parse(req.url, true);
 
@@ -48,20 +48,52 @@ function handlePut(req, res) {
     }
 
     var chunks = [];
+   
+   var fcs = new FCS(options);
+   var fws = fcs.prepareWriteableStream(function(err,fcs) {
+      var json;
+      if (onlys)
+         json = JSON.stringify(fcs.getOnly(onlys), null, 2);
+      else
+         json = fcs.toJSON();
 
+      res.writeHead(200, {
+         'Content-Type': 'application/json',
+         'Content-Length': json.length
+      });
+
+      res.write(json);
+      res.end();
+      
+      console.log(json);
+   }, req);
+   
+   req.pipe(fws);
+
+   /*
     req.addListener("data", function(chunk) {
        chunks.push(chunk);
     });
     req.addListener("end", function() {
         var buffer = Buffer.concat(chunks);
-        var fcs = new FCS(options, buffer);
-        res.setHeader('content-type', 'application/json');
-        res.statusCode = 200;
+        try {
+           var fcs = new FCS(options, buffer);
+           var json;
+           if (onlys)
+              json = JSON.stringify(fcs.getOnly(onlys), null, 2);
+           else
+              json = fcs.toJSON();
+			  
+           res.writeHead(200, {'Content-Type': 'application/json' });
 
-        if (onlys)
-           res.end(JSON.stringify(fcs.getOnly(onlys), null, 2));
-        else
-            res.end(fcs.toJSON());
+           res.write(json);
+		     res.end();
+        }
+       
+        catch (error) {
+           console.log(error);
+           res.end(JSON.stringify(error, null, 2));
+        }
     });
 
 
@@ -78,5 +110,7 @@ function handlePut(req, res) {
     req.addListener("close", function(err) {
         foobar('Connection closed');
     });
+    
+    */
 }
 
