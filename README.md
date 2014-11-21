@@ -45,7 +45,7 @@ Any additional options are ignored, but will be printed under a "meta" segment i
 
 ###var myFCS = new FCS(options, buffer)
 Constructor.  Both arguments are optional.
-If buffer is present it will be read, otherwise you need to call readBuffer() later
+If buffer is present it will be read, otherwise you need to call **readBuffer()** or **readStreamAsync()** later
 
 ###myFCS.options(options)
 Set or add options.
@@ -53,6 +53,16 @@ Set or add options.
 ###myFCS.readBuffer(buffer, moreOptions)
 Read data from buffer.  moreOptions are optional.  Hopefully by now you've set them all! :-)
 
+###myFCS.readStreamAsync(readStream, moreOptions, callback)
+Reads data asynchronously from a readStream.  moreOptions is optional.  When complete, calls `callback(err, fcs)`.
+
+###myFCS.prepareWriteableStream(callback, readableStream)
+The readableStream arg is optional.  Creates a writeableStream ready to parse an FCS format file.  e.g.
+
+    var fws = fcs.prepareWriteableStream(callback, readableStream);
+    readableStream.pipe(fws);
+    
+When piping is complete, will call `callback(err, fcs)`.
 
 ##retrieving the data
 
