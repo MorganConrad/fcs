@@ -18,7 +18,7 @@ function FCS( /* optional */ options, buffer) {
 
     // allow "static" usage, save user from misuse...
     if (!(this instanceof FCS))
-       return new FCS(options, databuf);
+       return new FCS(options, buffer);
 
     
     
