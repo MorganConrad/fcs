@@ -1,17 +1,21 @@
 {
   "name": "fcs",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Flow Cytometry Standard (FCS) file reader",
   "main": "fcs.js",
 
   "devDependencies": {
-     "mocha": "1.14.x"
+     "mocha": "1.14.x",
+     "nyc" : "^11.2.0",
+     "coveralls" : "^3.0"
   },
 
   "scripts": {
-      "test": "mocha",
+      "oldtest": "mocha",
+      "test" : "nyc --reporter=lcov mocha",
       "testOnUnixUseThis"    : "./node_modules/.bin/mocha (I think)",
-      "testOnWindowsUseThis" : "node node_modules/mocha/bin/mocha"
+      "testOnWindowsUseThis" : "node node_modules/mocha/bin/mocha",
+      "coverage" : "nyc --reporter=text-lcov report | coveralls"
   },
   "repository": {
     "type": "git",

@@ -12,9 +12,11 @@ logs
 results
 
 coverage
-npm-debug.log
-node_modules
+npm-debug.log/
+node_modules/
+.nyc_output/
 projectFilesBackup
+.coveralls.yml
 
 #my ignores
 examples/fcsfiles/

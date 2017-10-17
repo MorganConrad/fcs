@@ -2,10 +2,11 @@
 [![License](http://img.shields.io/badge/license-MIT-A31F34.svg)](https://github.com/MorganConrad/fcs)
 [![NPM Downloads](http://img.shields.io/npm/dm/fcs.svg)](https://www.npmjs.org/package/fcs)
 [![Known Vulnerabilities](https://snyk.io/test/npm/fcs/badge.svg)](https://snyk.io/test/npm/fcs)
+[![Coverage Status](https://coveralls.io/repos/github/MorganConrad/fcs/badge.svg)](https://coveralls.io/github/MorganConrad/fcs)
 
 # fcs
 
-Javascript / node.js code to read FCS flow cytometry data.  Will read all of the HEADER, TEXT, and ANALYSIS segments into key/value pairs.  Reads raw (likely uncompensated) data as well, either into numeric arrays for further analysis, or as Strings for quickly scanning the data. 
+Javascript / node.js code to read FCS flow cytometry data.  Will read all of the HEADER, TEXT, and ANALYSIS segments into key/value pairs.  Reads raw (likely uncompensated) data as well, either into numeric arrays for further analysis, or as Strings for quickly scanning the data.
 
 ## basic usage
 
@@ -62,7 +63,7 @@ The readableStream arg is optional.  Creates a writeableStream ready to parse an
 
     var fws = fcs.prepareWriteableStream(callback, readableStream);
     readableStream.pipe(fws);
-    
+
 When piping is complete, will call `callback(err, fcs)`.
 
 ## retrieving the data
