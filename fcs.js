@@ -439,13 +439,14 @@ FCS.prototype._prepareReadParameters = function (databuf) {
 
     readParameters.bytesPerEvent = readParameters.bytes * this.meta.$PAR;
 
+    options.skip = options.skip || options.eventSkip; // fix bug#4
     if (options.skip && (readParameters.eventsToRead < this.meta.eventCount)) {
         var events2Skip;
-        if (isFinite(options.skip))
+        if (Number.isFinite(options.skip))
             events2Skip = options.skip;
-        else {
-            events2Skip = Math.floor(this.meta.eventCount / readParameters.eventsToRead) -1;
-            this.meta.eventSkip = options.skip + " -> " + events2Skip;
+        else {  // FIXME, doesn't actually work
+            events2Skip = Math.floor(this.meta.eventCount / readParameters.eventsToRead) -2;
+            this.meta.computedSkip = options.skip + " -> " + events2Skip;
         }
         readParameters.bigSkip = events2Skip * readParameters.bytesPerEvent;
     }

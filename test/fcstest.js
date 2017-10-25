@@ -59,10 +59,26 @@ describe('test FCS', function() {
                 assert(!err);
                 var fcs = new FCS(null, databuf);
                 assertAriaTextAndData(fcs, false);
+                for (var i=1; i<8; i++)
+                   console.dir(i + " = " + fcs.getStringData(i));
                 done();
             });
         });
     });
+    
+    describe('after reading an FCS file asNumber and skip', function() {
+        it('should have text and data', function(done) {
+            fs.readFile('./test/testdata/AriaFile1.fcs', function(err, databuf) {
+                assert(!err);
+                var fcs = new FCS({dataFormat:"asBoth", skip:2}, databuf);
+                console.dir(fcs.meta);
+                assert.equal(33760.00, fcs.getNumericData(2)[1]); 
+                assert.equal('[33923.85,33760.00,1792.00,3643.90,32.20,24.75,115.50', fcs.getStringData(2).substring(0, 53)); 
+                done();
+            });
+        });
+    });
+    
 
 
     describe('after read async', function() {
@@ -84,6 +100,7 @@ describe('test FCS', function() {
 function assertAriaTextAndData(fcs, byParam) {
     assert.equal('FCS3.0', fcs.header.FCSVersion);
     assert.equal('4,3,2,1', fcs.getText('$BYTEORD'));
+    assert.equal('Compens\fation Controls', fcs.getText('$SRC'));  // inserted a \f to test escaping
     assert(fcs.getAnalysis());
     assert(!fcs.getAnalysis('foo'));
     if (!byParam)
@@ -96,10 +113,10 @@ function assertAriaTextAndData(fcs, byParam) {
     // not a great test, but look for 1st line of data
     var json = fcs.toJSON();
     if (byParam) {
-        assert.equal(3984, json.indexOf('[[33471.21,33892.11,30264.09'));
+        assert.equal(3986, json.indexOf('[[33471.21,33892.11,30264.09'));
     }
     else {
-       assert.equal(3960, json.indexOf('[[33471.21,33250.00,1708.00')); 
+       assert.equal(3962, json.indexOf('[[33471.21,33250.00,1708.00')); 
     }
 }
 
