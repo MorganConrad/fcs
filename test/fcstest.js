@@ -1,20 +1,20 @@
 /**
  * @author Morgan Conrad
- * Copyright(c) 2013
+ * Copyright(c) 2018
  * This software is released under the MIT license  (http://opensource.org/licenses/MIT)
  */
 
-var fs = require('fs');
-var FCS = require('../fcs');
-var assert = require('assert');
-var mocha = require('mocha');
+const fs = require('fs');
+const FCS = require('../fcs');
+const assert = require('assert');
+const mocha = require('mocha');
 
-var EMPTY = JSON.stringify({});
+const EMPTY = JSON.stringify({});
 
 describe('test FCS', function() {
 
     describe('after new FCS()', function() {
-        var fcs = new FCS();
+        let fcs = new FCS();
         it('should have two defaults', function() {
             assert.equal(JSON.stringify(fcs.meta), JSON.stringify({
                 dataFormat: FCS.DEFAULT_VALUES.dataFormat,
@@ -33,7 +33,7 @@ describe('test FCS', function() {
     });
 
     describe('after new FCS().options()', function() {
-        var fcs = new FCS();
+      let fcs = new FCS();
         fcs.options( {foo:'bar', dataFormat:'asNone'})
         it('should have new values defaults', function() {
             assert.equal(JSON.stringify(fcs.meta), JSON.stringify({
@@ -65,34 +65,34 @@ describe('test FCS', function() {
             });
         });
     });
-    
+
     describe('after reading an FCS file asNumber and skip', function() {
         it('should have text and data', function(done) {
             fs.readFile('./test/testdata/AriaFile1.fcs', function(err, databuf) {
                 assert(!err);
                 var fcs = new FCS({dataFormat:"asBoth", skip:2}, databuf);
                 console.dir(fcs.meta);
-                assert.equal(33760.00, fcs.getNumericData(2)[1]); 
-                assert.equal('[33923.85,33760.00,1792.00,3643.90,32.20,24.75,115.50', fcs.getStringData(2).substring(0, 53)); 
+                assert.equal(33760.00, fcs.getNumericData(2)[1]);
+                assert.equal('[33923.85,33760.00,1792.00,3643.90,32.20,24.75,115.50', fcs.getStringData(2).substring(0, 53));
                 done();
             });
         });
     });
-    
+
 
 
     describe('after read async', function() {
-        var stream;
+      let stream;
         it('should have text and data', function(done) {
             stream = fs.createReadStream('./test/testdata/AriaFile1.fcs');
-            var fcs = new FCS( { eventsToRead : 4000, groupBy: "byParam" });  // 4000 forces multiple reads 
+            var fcs = new FCS( { eventsToRead : 4000, groupBy: "byParam" });  // 4000 forces multiple reads
             fcs.readStreamAsync(stream, null, function(err, fcs) {
                 assert(!err);
                 assertAriaTextAndData(fcs, true);
                 done();
             });
         });
-        
+
     });
 });
 
@@ -104,23 +104,18 @@ function assertAriaTextAndData(fcs, byParam) {
     assert(fcs.getAnalysis());
     assert(!fcs.getAnalysis('foo'));
     if (!byParam)
-        assert.equal('[33471.21,33250.00', fcs.getStringData(1).substring(0, 18)); 
-    
-    var p1nViaGetOnly = fcs.getOnly('text.$P1N');
-    var p1NViaPnX = fcs.get$PnX('N');
+        assert.equal('[33471.21,33250.00', fcs.getStringData(1).substring(0, 18));
+
+    let p1nViaGetOnly = fcs.getOnly('text.$P1N');
+    let p1NViaPnX = fcs.get$PnX('N');
     assert.equal(p1nViaGetOnly.text['$P1N'], p1NViaPnX[1]);
-    
+
     // not a great test, but look for 1st line of data
-    var json = fcs.toJSON();
+    let json = fcs.toJSON();
     if (byParam) {
         assert.equal(3986, json.indexOf('[[33471.21,33892.11,30264.09'));
     }
     else {
-       assert.equal(3962, json.indexOf('[[33471.21,33250.00,1708.00')); 
+       assert.equal(3962, json.indexOf('[[33471.21,33250.00,1708.00'));
     }
 }
-
-
-
-
-

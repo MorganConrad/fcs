@@ -69,17 +69,17 @@ When piping is complete, will call `callback(err, fcs)`.
 ## retrieving the data
 
 ### get(segment, keywords...)
-segment should be one of  ('text', 'analysis', or, more rarely, 'header', 'meta').  
-If no keywords are provided, returns that entire segment  
-otherwise, returns a single value, stopping at the first match to the keyword.  
+segment should be one of  ('text', 'analysis', or, more rarely, 'header', 'meta').
+If no keywords are provided, returns that entire segment
+otherwise, returns a single value, stopping at the first match to the keyword.
 Returns null if none were found.
 
 ### getText(keywords...)
-Equivalent to get('text', keywords)  
-  *e.g.* `text('$P3N') might return 'FL1-H'  
+Equivalent to get('text', keywords)
+  *e.g.* `text('$P3N') might return 'FL1-H'
 
 ### get$PnX(x)
-Return an array of all N keywords for that P.X combination.  The 0th value will be empty.  
+Return an array of all N keywords for that P.X combination.  The 0th value will be empty.
   *e.g.* `get$PnX('N') might return ['', 'FSC, 'SSC', 'FL1-H', ...]
 
 ### getAnalysis(keyword, additionalKeywords...)
@@ -92,7 +92,7 @@ Returns an array of Numbers for the respective event or parameter, iff you reque
 Returns an array of Strings for the respective event or parameter, iff you requested string data.
 
 ### getOnly(onlys)
-Returns a subset of the JSON, based upon onlys, an array of dot delimited Strings  
+Returns a subset of the JSON, based upon onlys, an array of dot delimited Strings
   *e.g.* getOnlys(['meta','text.$P1N') would return all of meta, plus parameter 1 name
 
 ## fields
@@ -108,3 +108,12 @@ Returns a subset of the JSON, based upon onlys, an array of dot delimited String
 
 ### .meta
   Holds all the options, plus a bit more
+
+## Todos and Gotchas [official bugs here](https://github.com/MorganConrad/fcs/issues)
+
+ - doesn't handle $BEGINSTEXT, $ENDSTEXT
+ - could do more with Millipore's XML ANALYSIS
+
+## Changelog
+
+ - v0.1.0  17 Nov 2018 partly converted to use ES6 features
