@@ -97,6 +97,37 @@ describe('test FCS', function() {
 });
 
 
+// Sony uses 1,2,3,4 byte order and Integers
+describe('Sony Data', function() {
+  it('should have text and data', function(done) {
+    fs.readFile('./test/testdata/iCyt.fcs', function(err, databuf) {
+        assert(!err);
+        let fcs = new FCS(null, databuf);
+        assert.equal('FCS3.0', fcs.header.FCSVersion);
+        assert.equal('1,2,3,4', fcs.getText('$BYTEORD'));
+        assert(fcs.getAnalysis());
+        assert.equal('[13083200,10437999', fcs.getStringData(1).substring(0, 18));
+        done();
+    });
+});
+});
+
+// Old Partec 2.0 file
+describe('Partec Data', function() {
+  it('should have text and data', function(done) {
+    fs.readFile('./test/testdata/Partec.fcs', function(err, databuf) {
+        assert(!err);
+        let fcs = new FCS(null, databuf);
+        assert.equal('FCS2.0', fcs.header.FCSVersion);
+        assert.equal('1,2,3,4', fcs.getText('$BYTEORD'));
+        assert(fcs.getAnalysis());
+        assert.equal('[1503,1295,1841,1404', fcs.getStringData(1).substring(0, 20));
+        done();
+    });
+  });
+});
+
+
 function assertAriaTextAndData(fcs, byParam) {
     assert.equal('FCS3.0', fcs.header.FCSVersion);
     assert.equal('4,3,2,1', fcs.getText('$BYTEORD'));

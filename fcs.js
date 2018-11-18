@@ -321,8 +321,8 @@ FCS.prototype.prepareWriteableStream = function(callback, readableStream) {
  */
 FCS.prototype._prepareReadParameters = function(databuf) {
   let isBE;
-  if ("4,3,2,1" === this.text.$BYTEORD) isBE = true;
-  else if ("1,2,3,4" === this.text.$BYTEORD) isBE = false;
+  if (this.text.$BYTEORD.includes("2,1")) isBE = true;
+  else if (this.text.$BYTEORD.includes("1,2")) isBE = false;
   else throw Error("cannot handle $BYTEORD= " + this.text.$BYTEORD);
 
   let options = this.meta;
