@@ -22,3 +22,4 @@ projectFilesBackup
 examples/fcsfiles/
 .idea/
 misc/
+package-lock.json
