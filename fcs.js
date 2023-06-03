@@ -45,7 +45,7 @@ function FCS(/* optional */ options, buffer) {
     // collect meta, header, text, and analysis
     let segmentVals = Object.keys(FCS.SEGMENT).map((key) => {
       let segmentName = FCS.SEGMENT[key];
-      return '"' + segmentName + ': "' + JSON.stringify(this[segmentName], null, 2);
+      return '"' + segmentName + '" :' + JSON.stringify(this[segmentName], null, 2);
     });
     let json = '{\n ' + segmentVals.join(',\n ');
 
