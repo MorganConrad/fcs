@@ -1,11 +1,11 @@
 {
   "name": "fcs",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Flow Cytometry Standard (FCS) file reader",
   "main": "fcs.js",
   "devDependencies": {
     "coveralls": "^3.0",
-    "mocha": "^7.0.0",
+    "mocha": "^10.2.0",
     "nyc": "^15.0.0"
   },
   "scripts": {
